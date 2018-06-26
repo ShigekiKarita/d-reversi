@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+d-reversi.so
+d-reversi.dylib
+d-reversi.dll
+d-reversi.a
+d-reversi.lib
+d-reversi-test-*
+*.exe
+*.o
+*.obj
+*.lst
+dub.selections.json
+d-reversi
