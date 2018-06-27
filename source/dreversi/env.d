@@ -234,6 +234,31 @@ unittest {
                           Point.white, Point.white, Point.white, Point.empty].sliced(4, 4));
     assert(!b3.pass(true));
     assert(b3.pass(false));
+
+    /*
+     0  1  2  3  4  5  6  7
+  0[ ][ ][ ][ ][ ][ ][ ][ ]  0
+  1[ ][ ][ ][ ][ ][ ][ ][ ]  1
+  2[ ][ ][ ][ ][ ][ ][ ][ ]  2
+  3[ ][ ][o][o][o][o][o][ ]  3
+  4[x][x][x][x][o][ ][ ][ ]  4
+  5[x][x][x][x][x][o][x][x]  5
+  6[x][x][x][x][x][x][o][ ]  6
+  7[x][x][x][x][x][x][x][x]  7
+     0  1  2  3  4  5  6  7
+     */
+    enum _ = Point.empty;
+    enum x = Point.black;
+    enum o = Point.white;
+    immutable b4 = Board([_, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _, _,
+                          _, _, o, o, o, o, o, _,
+                          x, x, x, x, o, _, _, _,
+                          x, x, x, x, x, o, x, x,
+                          x, x, x, x, x, x, o, _,
+                          x, x, x, x, x, x, x, x].sliced(8, 8));
+    assert(!b4.put(false, 0, 0).valid);
 }
 
 /// returns initial board

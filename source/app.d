@@ -18,7 +18,7 @@ auto readAction(in Board env, bool isBlack) {
     Board board;
     while (true) {
         try {
-            writeln(">>> input '{row} {col}\\n'");
+            writeln(">>> Input '{row} {col}\\n'");
             formattedRead!"%d %d\n"(readln(), r, c); // readf is buggy
             board = env.put(isBlack, r, c);
             if (board.valid) {
@@ -46,41 +46,47 @@ void main(string[] args) {
         return;
     }
 
+    const isPlayerBlack = !second; // second will be white
+    const isAgentBlack = !isPlayerBlack;
+
     // mutable states
     auto env = reset(rows, cols);
-    bool isBlackTurn = true;
-    auto agent = AlphaBetaAgent(second);
+    auto isPlayerTurn = !second;
+    auto agent = AlphaBetaAgent(isAgentBlack);
+    // auto agent = MinMaxAgent(isAgentBlack);
 
     while (true) {
         writeln(env);
-        writefln!"turn: %s. stat: %s"(isBlackTurn ? "black(x)" : "white(o)", env.count);
-        if (env.pass(isBlackTurn)) {
-            writeln(isBlackTurn ? "black" : "white", " is pass");
-            // isBlackTurn = !isBlackTurn;
-            if (env.pass(!isBlackTurn)) {
-                auto stat = env.count;
-                writeln(">>> Finished ... ", stat);
-                writeln(env);
-                if (stat[Point.black] > stat[Point.white]) {
-                    writeln("Black is winner!");
-                } else if (stat[Point.white] > stat[Point.black]) {
-                    writeln("White is winner!");
-                } else {
-                    writeln("Even!");
-                }
-                return;
+        writefln!">>> turn: %s. stat: %s"(isPlayerTurn ? "player" : "agent", env.count);
+
+        if (env.finished) {
+            auto stat = env.count;
+            writeln(">>> Finished ... ", stat);
+            if (stat[Point.white] == stat[Point.black]) {
+                writeln(">>> Even!");
+            } else if (stat[Point.black] > stat[Point.white]) {
+                writefln!">>> You %s!"(isPlayerBlack ? "win" : "lose");
+            } else {
+                writefln!">>> You %s!"(!isPlayerBlack ? "win" : "lose");
             }
-            isBlackTurn = !isBlackTurn;
+            return;
         }
 
-        if (isBlackTurn == agent.isBlack) {
-            const action = agent.select(env, depth);
-            env = env.put(agent.isBlack, action.row, action.col);
+        if (isPlayerTurn) {
+            if (env.pass(isPlayerBlack)) {
+                writeln(">>> Skip player turn");
+            } else {
+                env = env.readAction(isPlayerBlack);
+            }
         } else {
-            env = env.readAction(isBlackTurn);
+            if (env.pass(isAgentBlack)) {
+                writeln(">>> Skip agent turn");
+            } else {
+                const action = agent.select(env, depth);
+                env = env.put(agent.isBlack, action.row, action.col);
+                writefln!"%d %d"(action.row, action.col);
+            }
         }
-
-        isBlackTurn = !isBlackTurn;
-
+        isPlayerTurn = !isPlayerTurn;
     }
 }
