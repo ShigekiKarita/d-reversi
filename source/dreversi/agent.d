@@ -1,7 +1,10 @@
 module dreversi.agent;
 
 import dreversi.env;
+
 import std.math;
+import std.stdio;
+
 import mir.ndslice;
 
 alias Score = double;
@@ -15,6 +18,7 @@ struct Action {
 /// as it computes without memory of game tree
 struct MinMaxAgent {
     bool isBlack;
+    bool verbose = false;
 
     Action select(in Board board, size_t depth = 3) {
         Action best;
@@ -23,7 +27,7 @@ struct MinMaxAgent {
                 auto next = board.put(this.isBlack, r, c);
                 if (next.valid) {
                     immutable score = search(next, false, depth);
-                    // writefln!"(%d, %d, %f)"(r, c, score);
+                    if (this.verbose) writefln!"Action(%d, %d, %f)"(r, c, score);
                     if (best.score.isNaN || score > best.score) {
                         best = Action(r, c, score);
                     }
@@ -79,7 +83,7 @@ unittest {
 /// as it computes without memory of game tree
 struct AlphaBetaAgent {
     bool isBlack;
-    alias Score = double;
+    bool verbose = false;
 
     Action select(in Board board, size_t depth = 3) {
         Action best;
@@ -90,7 +94,7 @@ struct AlphaBetaAgent {
                     immutable score = search(next, false, depth,
                                              -double.infinity,
                                              double.infinity);
-                    // writefln!"(%d, %d, %f)"(r, c, score);
+                    if (this.verbose) writefln!"Action(%d, %d, %f)"(r, c, score);
                     if (best.score.isNaN || score > best.score) {
                         best = Action(r, c, score);
                     }

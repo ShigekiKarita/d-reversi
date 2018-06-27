@@ -9,9 +9,11 @@ import dreversi.agent;
 
 /// CMD opts
 bool second = false;
+bool verbose = false;
 size_t depth = 3;
 size_t rows = 8;
 size_t cols = 8;
+
 
 auto readAction(in Board env, bool isBlack) {
     size_t r, c;
@@ -38,6 +40,7 @@ void main(string[] args) {
     auto help = getopt(
         args,
         "second", &second,
+        "verbose", &verbose,
         "rows", &rows,
         "cols", &cols,
         "depth", &depth);
@@ -52,8 +55,8 @@ void main(string[] args) {
     // mutable states
     auto env = reset(rows, cols);
     auto isPlayerTurn = !second;
-    auto agent = AlphaBetaAgent(isAgentBlack);
-    // auto agent = MinMaxAgent(isAgentBlack);
+    auto agent = AlphaBetaAgent(isAgentBlack, verbose);
+    // auto agent = MinMaxAgent(isAgentBlack, verbose);
 
     while (true) {
         writeln(env);
