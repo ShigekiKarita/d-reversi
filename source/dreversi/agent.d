@@ -20,7 +20,7 @@ struct AlphaBetaAgent {
             foreach (c; 0 .. board.length!1) {
                 auto next = board.put(this.isBlack, r, c);
                 if (next.valid) {
-                    immutable score = search(next, false, depth,
+                    immutable score = search(next, true, depth,
                                              -double.infinity,
                                              double.infinity);
                     if (score > bestScore) {
@@ -32,7 +32,7 @@ struct AlphaBetaAgent {
         return bestAction;
     }
 
-    Score search(in Board board, bool isMine,
+    Score search(in Board board, bool isMine, // true if board is result of my action
                  size_t depth, Score alpha, Score beta // search stats
         ) {
         import std.algorithm : max, min;
@@ -41,14 +41,15 @@ struct AlphaBetaAgent {
             return cast(double) board.score(this.isBlack);
         }
 
-        if (isMine && board.pass(this.isBlack)) {
-            return search(board, false, depth-1, alpha, beta);
+        /// pass
+        if ((isMine && board.pass(!this.isBlack)) || (!isMine && board.pass(this.isBlack))) {
+            return search(board, !isMine, depth-1, alpha, beta);
         }
 
         foreach (r; 0 .. board.length!0) {
             foreach (c; 0 .. board.length!1) {
-                const color = isMine ? this.isBlack : !this.isBlack; // XOR
-                const b = board.put(color, r, c);
+                immutable color = isMine ? this.isBlack : !this.isBlack; // XOR
+                immutable b = board.put(color, r, c);
                 if (b.valid) {
                     const score = search(b, !isMine, depth - 1, alpha, beta); // recur
                     if (isMine) {
@@ -56,7 +57,9 @@ struct AlphaBetaAgent {
                     } else {
                         beta = min(beta, score);
                     }
-                    if (alpha >= beta) break; // cut
+                    if (alpha >= beta) { // cut
+                        return isMine ? alpha : beta;
+                    }
                 }
             }
         }

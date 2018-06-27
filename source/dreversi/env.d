@@ -1,5 +1,6 @@
 module dreversi.env;
 
+import std.stdio;
 import mir.ndslice;
 
 // states of reversi points
@@ -23,28 +24,32 @@ struct Board {
     @property @safe
     pure toString() const {
         import std.string;
-        string ret = "   ";
-        foreach (j; 0..this.length!1) {
-            ret ~= format!"%3d"(j);
+        string horizontal = "   ";
+        foreach (j; 0 .. this.length!1) {
+            horizontal ~= format!"%3d"(j);
         }
-        ret ~= "\n";
-        foreach (i; 0..this.length!0) {
+        horizontal ~= "\n";
+        string ret = horizontal;
+        foreach (i; 0 .. this.length!0) {
             ret ~= format!"%3d"(i);
             foreach (j; 0..this.length!1) {
                 ret ~= format!"[%s]"(pointString[this.slice[i, j]]);
             }
-            ret ~= "\n";
+            ret ~= format!"%3d\n"(i);
         }
+        ret ~= horizontal;
         return ret;
     }
 }
 
+pure @safe:
+
 /// returns next step by the action
-@safe pure put(in Board b, bool isBlack, size_t row, size_t col) {
+auto put(in Board b, bool isBlack, size_t row, size_t col) {
     import std.algorithm : min;
 
     immutable p = isBlack ? Point.black : Point.white;
-    if (!b.valid || row >= b.length!0 || col >= b.length!1 || b[row, col] != Point.empty) {
+    if (row >= b.length!0 || col >= b.length!1 || b[row, col] != Point.empty) {
         return Board(b.data, false);
     }
 
@@ -144,14 +149,14 @@ struct Board {
 }
 
 /// counts the number of empty/black/white positions
-pure count(in Board b) {
+auto count(in Board b) {
     auto ret =  [Point.empty: 0, Point.black: 0, Point.white: 0];
     b.each!((p) { ++ret[p]; });
     return ret;
 }
 
 /// returns true if no next move for the color
-pure pass(in Board b, bool isBlack) {
+auto pass(in Board b, bool isBlack) {
     import std.algorithm : any, map;
     auto stat = b.count;
     if (stat.byValue.map!"a == 0".any) return true;
@@ -194,11 +199,12 @@ unittest {
     auto b5x5_ = b5x5.put(false, 2, 2);
     assert(b5x5_.toString ==
 `     0  1  2  3  4
-  0[o][ ][o][o][o]
-  1[ ][o][o][o][ ]
-  2[x][x][o][o][o]
-  3[ ][o][o][o][ ]
-  4[o][ ][o][o][o]
+  0[o][ ][o][o][o]  0
+  1[ ][o][o][o][ ]  1
+  2[x][x][o][o][o]  2
+  3[ ][o][o][o][ ]  3
+  4[o][ ][o][o][o]  4
+     0  1  2  3  4
 `);
     assert(b5x5_.count == [Point.empty: 6, Point.white: 17, Point.black: 2]);
     assert(!b5x5_.pass(true));
@@ -210,12 +216,28 @@ unittest {
                           Point.empty, Point.empty, Point.white, Point.empty].sliced(4, 4));
     assert(b2.pass(true));
     assert(!b2.pass(false));
+
+    /*
+         0  1  2  3        
+      0[x][ ][ ][ ]  0     
+      1[x][o][o][ ]  1     
+      2[x][o][o][ ]  2     
+      3[o][o][o][ ]  3     
+         0  1  2  3
+      >>> 3 0
+      >>> 3 2
+      >>> 1 0
+     */
+    immutable b3 = Board([Point.black, Point.empty, Point.empty, Point.empty,
+                          Point.black, Point.white, Point.white, Point.empty,
+                          Point.black, Point.white, Point.white, Point.empty,
+                          Point.white, Point.white, Point.white, Point.empty].sliced(4, 4));
+    assert(!b3.pass(true));
+    assert(b3.pass(false));
 }
 
 /// returns initial board
-@safe pure reset(size_t rows = 8, size_t cols = 8) {
-    assert(rows % 2 == 0, "row size should be even");
-    assert(cols % 2 == 0, "col size should be even");
+auto reset(size_t rows = 8, size_t cols = 8) {
     auto s = uninitSlice!Point(rows, cols);
     s[] = Point.empty;
     s[rows / 2, cols / 2] = Point.black;
@@ -225,11 +247,11 @@ unittest {
     return Board(s);
 }
 
-pure finished(in Board board) {
+auto finished(in Board board) {
     return board.pass(true) && board.pass(false);
 }
 
-pure score(in Board board, bool isBlack) {
+auto score(in Board board, bool isBlack) {
     immutable stat = board.count;
     return stat[isBlack ? Point.black : Point.white] - stat[isBlack ? Point.white : Point.black];
 }
