@@ -1,5 +1,9 @@
 # D-Reversi
 
+[![Build Status](https://travis-ci.org/ShigekiKarita/d-reversi.svg?branch=master)](https://travis-ci.org/ShigekiKarita/d-reversi)
+[![codecov](https://codecov.io/gh/ShigekiKarita/d-reversi/branch/master/graph/badge.svg)](https://codecov.io/gh/ShigekiKarita/d-reversi)
+[![Dub version](https://img.shields.io/dub/v/d-reversi.svg)](https://code.dlang.org/packages/d-reversi)
+
 D language implementaion of Reversi
 
 You can play it by `$ dub`
