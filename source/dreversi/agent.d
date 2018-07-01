@@ -84,6 +84,7 @@ unittest {
 struct AlphaBetaAgent {
     bool isBlack;
     bool verbose = false;
+    double[Board] scoreCache;
 
     Action select(in Board board, size_t depth = 3) {
         Action best;
@@ -91,9 +92,15 @@ struct AlphaBetaAgent {
             foreach (c; 0 .. board.length!1) {
                 auto next = board.put(this.isBlack, r, c);
                 if (next.valid) {
-                    immutable score = search(next, false, depth,
-                                             -double.infinity,
-                                             double.infinity);
+
+                    if (board !in this.scoreCache) {
+                        this.scoreCache[board] = // cast(double) board.score(true);
+                            search(next, false, depth, -double.infinity, double.infinity);
+                    }
+                    immutable score = this.scoreCache[board];
+                    // immutable score = search(next, false, depth,
+                    //                          -double.infinity,
+                    //                          double.infinity);
                     if (this.verbose) writefln!"Action(%d, %d, %f)"(r, c, score);
                     if (best.score.isNaN || score > best.score) {
                         best = Action(r, c, score);
