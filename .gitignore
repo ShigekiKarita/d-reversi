@@ -4,6 +4,7 @@
 !*.md
 !dub.json
 !.gitignore
+!.travis.yml
 
 .dub
 docs.json
