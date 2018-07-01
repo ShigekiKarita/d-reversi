@@ -21,6 +21,78 @@ struct Board {
     bool valid = true;
     alias data this;
 
+    @safe pure nothrow
+    auto mirrors() const {
+        import std.typecons : tuple;
+        return tuple(
+            this.data
+            , this.data.reversed!0
+            , this.data.reversed!1
+            , this.data.reversed!(0, 1)
+            );
+    }
+
+    size_t _toHash(S)(ref in S d) const nothrow if (isSlice!S) {
+        import std.bitmanip;
+        import std.range;
+        import std.algorithm : stdmap = map;
+        import std.array;
+        int err;
+        auto b = new bool[d.length!0 * d.length!1];
+        foreach (i; 0 .. d.length!0) {
+            immutable c = i * d.length!1;
+            foreach (j; 0 .. d.length!1) {
+                b[c + j] =
+                    (i % 2 == 0) && (j % 2 == 0)
+                    ? d[i, j] == Point.black
+                    : d[i, j] == Point.white;
+                // b[i * d.length!1 * 2 + j + 1] = d[i, j] == Point.white;
+            }
+        }
+        // d.reshape([len], err).stdmap!(a => a == Point.white)
+        // );
+        return BitArray(b).toHash;
+        // Point prev = d[0, 0];
+        // size_t count = 0;
+        // size_t hash = 0;
+        // foreach (es; d) {
+        //     foreach (e; es) {
+        //         if (e == prev) {
+        //             ++count;
+        //         } else {
+        //             hash *= count * (e + 1);
+        //         }
+        //     }
+        // }
+        // return hash;
+    }
+
+    // reconsider this.
+    size_t toHash() const nothrow {
+        import std.algorithm : min, max;
+        size_t hash; // = size_t.max;
+        foreach (m; this.mirrors) {
+            hash = max(hash, _toHash(m));
+        }
+        return hash;
+    }
+
+    @safe pure nothrow
+    bool opEquals(ref const typeof(this) s) const {
+        foreach (m; this.mirrors) {
+            if (m == s.data) return true;
+        }
+        return false;
+        // return s.data == this.data
+        //     || s.data == this.data.reversed!0
+        //     || s.data == this.data.reversed!1
+        //     || s.data == this.data.reversed!(0, 1)
+        //     || s.data == this.data.transposed
+        //     || s.data == this.data.transposed.reversed!0
+        //     || s.data == this.data.transposed.reversed!1
+        //     || s.data == this.data.transposed.reversed!(0, 1);
+    }
+
     @property @safe
     pure toString() const {
         import std.string;
@@ -40,6 +112,37 @@ struct Board {
         ret ~= horizontal;
         return ret;
     }
+}
+
+///
+unittest
+{
+    import std.algorithm;
+    int[Board] dict;
+    immutable b0 = [Point.empty, Point.empty,
+                    Point.empty, Point.empty].sliced(2, 2).Board;
+    dict[b0] = 0;
+    assert(dict[b0] == 0);
+    assert(b0 in dict);
+
+    immutable b1 = [Point.empty, Point.empty,
+                    Point.black, Point.empty].sliced(2, 2).Board;
+    dict[b1] = 1;
+    assert(dict[b1] == 1);
+    assert(b1 in dict);
+
+    // reversed or transposed board should be same
+    immutable b1r0 = [Point.black, Point.empty,
+                      Point.empty, Point.empty].sliced(2, 2).Board;
+    assert(b1 == b1r0);
+    assert(b1.toHash == b1r0.toHash);
+    assert(b1r0 in dict);
+    assert(dict[b1r0] == 1);
+
+
+    immutable b2 = [Point.empty, Point.white,
+                    Point.black, Point.empty].sliced(2, 2).Board;
+    assert(b2 !in dict);
 }
 
 pure @safe:
@@ -149,7 +252,7 @@ auto put(in Board b, bool isBlack, size_t row, size_t col) {
 }
 
 /// counts the number of empty/black/white positions
-auto count(in Board b) {
+nothrow auto count(in Board b) {
     auto ret =  [Point.empty: 0, Point.black: 0, Point.white: 0];
     b.each!((p) { ++ret[p]; });
     return ret;

@@ -82,24 +82,40 @@ unittest {
 /// this is not efficient implementation
 /// as it computes without memory of game tree
 struct AlphaBetaAgent {
+    import std.container : DList;
+
     bool isBlack;
     bool verbose = false;
     double[Board] scoreCache;
+    DList!Board boardCache;
+    // TODO auto adjust these params
+    size_t maxMemory = 999999;
+    size_t removeSize = 99;
 
-    @safe
-    Action select(in Board board, size_t depth = 3) {
+    void memoizeScore(ref in Board board, Score s) {
+        import std.range;
+        this.scoreCache[board] = s;
+        this.boardCache.insert(board);
+        size_t i;
+        if (this.scoreCache.length > maxMemory) {
+            foreach (ref b; this.boardCache) {
+                this.scoreCache.remove(b);
+                if (i > this.removeSize) break;
+                ++i;
+            }
+            auto r = this.boardCache[];
+            popFrontN(r, this.removeSize);
+        }
+    }
+
+    Action select(ref in Board board, size_t depth = 3) {
         Action best;
+        this.scoreCache.rehash;
         foreach (r; 0 .. board.length!0) {
             foreach (c; 0 .. board.length!1) {
                 immutable next = board.put(this.isBlack, r, c);
                 if (next.valid) {
-                    /*
-                    if (board !in this.scoreCache) {
-                        this.scoreCache[board] = search(next, depth, -double.infinity, double.infinity);
-                    }
-                    immutable score = this.scoreCache[board];
-                    */
-                    immutable score = search(next, depth, -double.infinity, double.infinity);
+                    immutable score = search(next, depth);
                     if (this.verbose) {
                         writefln!"Action(%d, %d, %f)"(r, c, score);
                     }
@@ -112,13 +128,26 @@ struct AlphaBetaAgent {
         return best;
     }
 
-    pure @safe
-    Score search(bool isMine = false)(in Board board, size_t depth, Score alpha, Score beta) {
+    Score search(bool isMine = false)(in Board board, size_t depth,
+                                      Score alpha = -double.infinity,
+                                      Score beta = double.infinity) {
         // import std.algorithm : max, min;
         import mir.math.common : fmax, fmin;
 
+        static if (isMine) {
+            immutable scale = 1;
+        } else {
+            immutable scale = -1;
+        }
+
+        if (board in this.scoreCache) {
+            return scale * this.scoreCache[board];
+        }
+
         if (board.finished || depth == 0) {
-            return cast(double) board.score(this.isBlack);
+            immutable s = cast(Score) board.score(this.isBlack);
+            this.memoizeScore(board, s);
+            return s;
         }
 
         /// pass
@@ -128,10 +157,12 @@ struct AlphaBetaAgent {
             immutable color = !this.isBlack;
         }
         if (board.pass(color)) {
-            return search!(!isMine)(board, depth-1, alpha, beta);
+            immutable s = search!(!isMine)(board, depth-1, alpha, beta);
+            this.memoizeScore(board, s);
+            return s;
         }
 
-        foreach (r; 0 .. board.length!0) {
+    outer: foreach (r; 0 .. board.length!0) {
             foreach (c; 0 .. board.length!1) {
                 immutable b = board.put(color, r, c);
                 if (b.valid) {
@@ -142,14 +173,16 @@ struct AlphaBetaAgent {
                         beta = fmin(beta, score);
                     }
                     if (alpha >= beta) { // cut
-                        return isMine ? alpha : beta;
+                        break outer;
                     }
                 }
             }
         }
         static if (isMine) {
+            this.memoizeScore(board, alpha);
             return alpha;
         } else {
+            this.memoizeScore(board, -beta);
             return beta;
         }
     }
