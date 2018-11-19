@@ -10,7 +10,8 @@ import mir.ndslice;
 alias Score = double;
 
 struct Action {
-    size_t row = 0, col = 0;
+    size_t row = 0;
+    size_t col = 0;
     Score score = double.nan;
 }
 
