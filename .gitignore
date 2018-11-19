@@ -2,6 +2,7 @@
 !*/
 !*.d
 !*.md
+!*.png
 !dub.json
 !.gitignore
 !.travis.yml
