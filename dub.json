@@ -11,23 +11,23 @@
 	"license": "BSL-1.0",
     "configurations": [
         {
-            "name": "d-reversi-cui",
+            "name": "cui",
             "targetName": "d-reversi-cui",
             "targetType": "executable",
             "mainSourceFile": "bin/cui.d"
         },
         {
-            "name": "d-reversi-gui",
+            "name": "gui",
             "targetName": "d-reversi-gui",
             "targetType": "executable",
             "mainSourceFile": "bin/gui.d",
             "dependencies": {
-		        "gtk-d": "~>3.8.3"
+                "dlangui": "~>0.9.180"
 	        },
 
         },
         {
-            "name": "d-reversi-benchmark",
+            "name": "benchmark",
             "targetName": "d-reversi-benchmark",
             "targetType": "executable",
             "mainSourceFile": "bin/bench.d"
