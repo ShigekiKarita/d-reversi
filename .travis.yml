@@ -6,8 +6,6 @@ os:
 cache:
   - apt
   - dub
-  directories:
-    - /home/travis/.dub/
 
 language: d
 
