@@ -3,17 +3,29 @@ sudo: false
 os:
   - linux
 
+cache:
+    directories:
+     - /home/travis/.dub/
+
 language: d
 
 d:
   - ldc
   - dmd
 
+addons:
+  apt:
+    packages:
+      - libsdl2-dev
+
 env:
   - ARCH="x86_64"
 
 script:
   - dub test --arch "$ARCH" --build=unittest-cov
+  - cd bin/gui
+  - dub test --arch "$ARCH" --build=unittest-cov
+  - dub build --arch "$ARCH" --build=release
 
 after_success:
   - if [ "$DC" = dmd ]; then

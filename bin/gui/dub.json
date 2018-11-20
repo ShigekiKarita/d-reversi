@@ -5,7 +5,8 @@
     ],
     "dependencies": {
         "d-reversi": { "path": "../../" },
-        "dlangui": "~>0.9.180"
+        "dlangui": "~>0.9.180",
+        "derelict-util": "~>2.0.6"
     },
     "description": "d-reversi GUI client",
     "copyright": "Copyright © 2018, Shigeki Karita",
