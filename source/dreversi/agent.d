@@ -80,9 +80,11 @@ unittest {
     assert(action.score == -8.0);
 }
 
+alias AlphaBetaAgent = AlphaBetaAgentImpl!false;
+
 /// this is not efficient implementation
 /// as it computes without memory of game tree
-struct AlphaBetaAgent {
+struct AlphaBetaAgentImpl(bool isGUI = false) {
     import std.container : DList;
 
     bool isBlack;
@@ -92,6 +94,12 @@ struct AlphaBetaAgent {
     // TODO auto adjust these params
     size_t maxMemory = 999999;
     size_t removeSize = 99;
+
+    static if (isGUI)
+    {
+        shared bool canceled;
+        shared double progress;
+    }
 
     void memoizeScore(ref in Board board, Score s) {
         import std.range;
@@ -112,6 +120,8 @@ struct AlphaBetaAgent {
     Action select(ref in Board board, size_t depth = 3) {
         Action best;
         this.scoreCache.rehash;
+        // TODO progress report
+        // TODO parallel fork/join
         foreach (r; 0 .. board.length!0) {
             foreach (c; 0 .. board.length!1) {
                 immutable next = board.put(this.isBlack, r, c);

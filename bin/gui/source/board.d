@@ -1,5 +1,6 @@
 module board;
 
+import core.atomic : atomicStore;
 import std.concurrency : spawn, thisTid, Tid, send, receive;
 
 import dlangui;
@@ -16,27 +17,30 @@ T scaledByDPI(T)(T val)
 struct CancelMessage {}
 struct CancelAckMessage {}
 
-void worker(Tid parent)
+void worker(Tid parent, bool isBlack, shared(bool)* _agentDone)
 {
-    auto agent = AlphaBetaAgent(false, true);
+    auto agent = AlphaBetaAgent(isBlack, true);
     bool canceled = false;
-    int depth = 3;
+    int depth = 8;
     Log.d("agent worker started at ", thisTid);
 
     while (!canceled)
     {
         receive(
-            (const Board env)
+            (immutable Board env)
             {
-                Log.d("agent recieved board");
+                Log.d("agent received board");
                 if (pass(env, agent.isBlack)) {
-                    Log.d(">>> Skip agent turn");
+                    Log.d("skip agent turn");
+                    send(parent, env);
                 } else {
                     const action = agent.select(env, depth);
                     immutable next = put(env, agent.isBlack, action.row, action.col);
                     Log.d("agent move: ", [action.row, action.col]);
                     send(parent, next);
+                    Log.d(next);
                 }
+                atomicStore(*_agentDone, true);
             },
             (CancelMessage m)
             {
@@ -52,17 +56,13 @@ class BoardWidget : CanvasWidget
     const int rows, cols;
     const int margin;
     const float lineWidth;
-    Board board;
-    bool _isPlayerTurn;
     const bool isBlack;
+
+    Board board;
     Tid agentTid;
-    // shared AlphaBetaAgent agent;
+    bool _isPlayerTurn;
 
-    // @property
-    // synchronized bool isPlayerTurn() { return this._isPlayerTurn; }
-
-    // @property
-    // synchronized void isPlayerTurn(bool b) { this._isPlayerTurn = b; }
+    shared bool _agentDone = false;
 
     this(int rows, int cols, bool playFirst = true)
     {
@@ -72,7 +72,6 @@ class BoardWidget : CanvasWidget
         this.cols = cols;
         this._isPlayerTurn = playFirst;
         this.isBlack = playFirst;
-        // this.agent = AlphaBetaAgent(!this.isBlack, true);
 
         this.layoutWidth(FILL_PARENT).layoutHeight(FILL_PARENT);
         this.margin = 100.scaledByDPI;
@@ -80,28 +79,27 @@ class BoardWidget : CanvasWidget
         super.minHeight = 400.scaledByDPI;
         this.clickable(true);
         this.board = reset(rows, cols);
-        this.agentTid = spawn(&worker, thisTid);
+        this.agentTid = spawn(&worker, thisTid, !this.isBlack, &this._agentDone);
 
         this.mouseEvent = delegate bool(Widget w1, MouseEvent e)
             {
-                if (e.lbutton.isDown && this._isPlayerTurn)
+                if (e.lbutton.isDown)
                 {
-                    auto rc = xy2rc(e.x, e.y);
-                    if (valid(rc))
+                    const rc = xy2rc(e.x, e.y);
+                    const move = rc.int2;
+                    Log.d("clicked at ", move);
+                    if (this._isPlayerTurn)
                     {
-                        const move = rc.int2;
-                        Log.d("clicked at ", move);
-                        immutable next = board.put(this.isBlack, move[1], move[0]);
-                        if (next.valid)
+                        if (valid(rc))
                         {
-                            this.board = next;
-                            this._isPlayerTurn = false;
-                            send(this.agentTid, next);
-                            receive(
-                                (const Board b) {
-                                    this.board = b;
-                                    this._isPlayerTurn = true;
-                                });
+                            immutable next = board.put(this.isBlack, move[1], move[0]);
+                            if (next.valid)
+                            {
+                                this.board = next;
+                                this._agentDone.atomicStore(false);
+                                this._isPlayerTurn = false;
+                                send(this.agentTid, next);
+                            }
                         }
                     }
                 }
@@ -112,16 +110,17 @@ class BoardWidget : CanvasWidget
     ~this()
     {
         import std.concurrency : receiveOnly;
+
+        Log.d("waiting for agent thread closed");
         send(this.agentTid, CancelMessage());
-        receiveOnly!CancelAckMessage;
-        Log.d("agent thread closed");
+        // receiveOnly!CancelAckMessage;
     }
 
     struct RC
     {
         float row, col;
 
-        int[2] int2() { return [cast(int) row, cast(int) col]; }
+        int[2] int2() const { return [cast(int) row, cast(int) col]; }
     }
 
     auto valid(RC rc)
@@ -176,6 +175,16 @@ class BoardWidget : CanvasWidget
 
     override void doDraw(DrawBuf buf, Rect _rc)
     {
+        if (!this._isPlayerTurn && this._agentDone)
+    
+        {
+            receive(
+                (const Board b) {
+                    this.board = b;
+                    this._isPlayerTurn = true;
+                });
+        }
+
         import std.conv : to;
 
         const rc = shrinkToBoard(_rc);
