@@ -17,16 +17,6 @@
             "mainSourceFile": "bin/cui.d"
         },
         {
-            "name": "gui",
-            "targetName": "d-reversi-gui",
-            "targetType": "executable",
-            "mainSourceFile": "bin/gui.d",
-            "dependencies": {
-                "dlangui": "~>0.9.180"
-	        },
-
-        },
-        {
             "name": "benchmark",
             "targetName": "d-reversi-benchmark",
             "targetType": "executable",

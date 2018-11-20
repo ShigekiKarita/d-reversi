@@ -1,0 +1,13 @@
+{
+    "name": "d-reversi-gui",
+    "authors": [
+        "Shigeki Karita"
+    ],
+    "dependencies": {
+        "d-reversi": { "path": "../../" },
+        "dlangui": "~>0.9.180"
+    },
+    "description": "d-reversi GUI client",
+    "copyright": "Copyright © 2018, Shigeki Karita",
+    "license": "BSL-1.0"
+}

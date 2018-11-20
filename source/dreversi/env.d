@@ -145,7 +145,7 @@ unittest
     assert(b2 !in dict);
 }
 
-pure @safe:
+pure: // @safe:
 
 /// returns next step by the action
 auto put(in Board b, bool isBlack, size_t row, size_t col) {
