@@ -21,6 +21,10 @@ struct Board {
     bool valid = true;
     alias data this;
 
+    auto idup() const {
+        return typeof(this)(data.slice, this.valid);
+    }
+
     @safe pure nothrow
     auto mirrors() const {
         import std.typecons : tuple;
