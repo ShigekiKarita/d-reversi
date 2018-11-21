@@ -17,11 +17,10 @@ T scaledByDPI(T)(T val)
 struct CancelMessage {}
 struct CancelAckMessage {}
 
-void worker(Tid parent, bool isBlack, shared(bool)* _agentDone)
+void worker(Tid parent, bool isBlack, int depth, shared(bool)* _agentDone)
 {
     auto agent = AlphaBetaAgent(isBlack, true);
     bool canceled = false;
-    int depth = 8;
     Log.d("agent worker started at ", thisTid);
 
     while (!canceled)
@@ -64,7 +63,7 @@ class BoardWidget : CanvasWidget
 
     shared bool _agentDone = false;
 
-    this(int rows, int cols, bool playFirst = true)
+    this(int rows, int cols, int depth, bool playFirst = true)
     {
         super("board-widget");
 
@@ -79,7 +78,7 @@ class BoardWidget : CanvasWidget
         super.minHeight = 400.scaledByDPI;
         this.clickable(true);
         this.board = reset(rows, cols);
-        this.agentTid = spawn(&worker, thisTid, !this.isBlack, &this._agentDone);
+        this.agentTid = spawn(&worker, thisTid, !this.isBlack, depth, &this._agentDone);
 
         this.mouseEvent = delegate bool(Widget w1, MouseEvent e)
             {

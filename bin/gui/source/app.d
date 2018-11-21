@@ -7,9 +7,9 @@ static assert(
 // CMD opts
 bool second = false;
 bool verbose = false;
-size_t depth = 3;
 int rows = 8;
 int cols = 8;
+int depth = 5;
 
 class MainWidget : VerticalLayout {
     this() {
@@ -20,7 +20,7 @@ class MainWidget : VerticalLayout {
 
         super(id);
         this.layoutWidth(FILL_PARENT).layoutHeight(FILL_PARENT);
-        addChild(new BoardWidget(rows, cols));
+        addChild(new BoardWidget(rows, cols, depth));
     }
 
     override bool animating() { return true; }
