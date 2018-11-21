@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <title>dreversi.agent source code</title>
+	<meta charset="utf-8" />
+	<meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+	
+	<link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+	<div id="page-header">
+		<div id="logotype">
+		<span>Documentation</span>
+		<nav>
+			<a href="http://dlang.org/">Dlang.org</a>
+		</nav>
+		</div>
+
+		<form action="search-docs.html" id="search">
+			<input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+			<input type="submit" value="Go" />
+		</form>
+	</div>
+	<div id="page-body">
+		<div id="page-content">
+		<pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="kwrd">module</span> <span class="hid">dreversi.agent</span>;
+<a id="L2" href="#L2" class="br">2 </a>
+<a id="L3" href="#L3" class="br">3 </a><span class="kwrd">import</span> <span class="hid">dreversi.env</span>;
+<a id="L4" href="#L4" class="br">4 </a>
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">import</span> <span class="hid">std.math</span>;
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">std.stdio</span>;
+<a id="L7" href="#L7" class="br">7 </a>
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L9" href="#L9" class="br">9 </a>
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">alias</span> <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> = <span class="type">double</span>;
+<a id="L11" href="#L11" class="br">11 </a>
+<a id="L12" href="#L12" class="br">12 </a><span class="kwrd">struct</span> <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a> {
+<a id="L13" href="#L13" class="br">13 </a>    <span class="hid">size_t</span> <span class="hid">row</span> = <span class="num">0</span>;
+<a id="L14" href="#L14" class="br">14 </a>    <span class="hid">size_t</span> <span class="hid">col</span> = <span class="num">0</span>;
+<a id="L15" href="#L15" class="br">15 </a>    <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">score</span> = <span class="type">double</span>.<span class="hid">nan</span>;
+<a id="L16" href="#L16" class="br">16 </a>}
+<a id="L17" href="#L17" class="br">17 </a>
+<a id="L18" href="#L18" class="br">18 </a><span class="com">/// this is not efficient implementation</span>
+<a id="L19" href="#L19" class="br">19 </a><span class="com">/// as it computes without memory of game tree</span>
+<a id="L20" href="#L20" class="br">20 </a><span class="kwrd">struct</span> <a href="dreversi.agent.d.html#L20" title="dreversi.agent.MinMaxAgent" class="hid">MinMaxAgent</a> {
+<a id="L21" href="#L21" class="br">21 </a>    <span class="type">bool</span> <span class="hid">isBlack</span>;
+<a id="L22" href="#L22" class="br">22 </a>    <span class="type">bool</span> <span class="hid">verbose</span> = <span class="kwrd">false</span>;
+<a id="L23" href="#L23" class="br">23 </a>
+<a id="L24" href="#L24" class="br">24 </a>    <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a> <span class="hid">select</span>(<span class="kwrd">in</span> <span class="hid">Board</span> <span class="hid">board</span>, <span class="hid">size_t</span> <span class="hid">depth</span> = <span class="num">3</span>) {
+<a id="L25" href="#L25" class="br">25 </a>        <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a> <span class="hid">best</span>;
+<a id="L26" href="#L26" class="br">26 </a>        <span class="kwrd">foreach</span> (<span class="hid">r</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">0</span>) {
+<a id="L27" href="#L27" class="br">27 </a>            <span class="kwrd">foreach</span> (<span class="hid">c</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">1</span>) {
+<a id="L28" href="#L28" class="br">28 </a>                <span class="kwrd">auto</span> <span class="hid">next</span> = <span class="hid">board.put</span>(<span class="kwrd">this</span>.<span class="hid">isBlack</span>, <span class="hid">r</span>, <span class="hid">c</span>);
+<a id="L29" href="#L29" class="br">29 </a>                <span class="kwrd">if</span> (<span class="hid">next.valid</span>) {
+<a id="L30" href="#L30" class="br">30 </a>                    <span class="kwrd">immutable</span> <span class="hid">score</span> = <span class="hid">search</span>(<span class="hid">next</span>, <span class="kwrd">false</span>, <span class="hid">depth</span>);
+<a id="L31" href="#L31" class="br">31 </a>                    <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">verbose</span>) <span class="hid">writefln</span>!<span class="str">&quot;Action(%d, %d, %f)&quot;</span>(<span class="hid">r</span>, <span class="hid">c</span>, <span class="hid">score</span>);
+<a id="L32" href="#L32" class="br">32 </a>                    <span class="kwrd">if</span> (<span class="hid">best.score.isNaN</span> || <span class="hid">score</span> &gt; <span class="hid">best.score</span>) {
+<a id="L33" href="#L33" class="br">33 </a>                        <span class="hid">best</span> = <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a>(<span class="hid">r</span>, <span class="hid">c</span>, <span class="hid">score</span>);
+<a id="L34" href="#L34" class="br">34 </a>                    }
+<a id="L35" href="#L35" class="br">35 </a>                }
+<a id="L36" href="#L36" class="br">36 </a>            }
+<a id="L37" href="#L37" class="br">37 </a>        }
+<a id="L38" href="#L38" class="br">38 </a>        <span class="kwrd">return</span> <span class="hid">best</span>;
+<a id="L39" href="#L39" class="br">39 </a>    }
+<a id="L40" href="#L40" class="br">40 </a>
+<a id="L41" href="#L41" class="br">41 </a>    <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">search</span>(<span class="kwrd">in</span> <span class="hid">Board</span> <span class="hid">board</span>, <span class="type">bool</span> <span class="hid">isMine</span>, <span class="com">// true if board is result of my action</span>
+<a id="L42" href="#L42" class="br">42 </a>                 <span class="hid">size_t</span> <span class="hid">depth</span>
+<a id="L43" href="#L43" class="br">43 </a>        ) {
+<a id="L44" href="#L44" class="br">44 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">max</span>, <span class="hid">min</span>;
+<a id="L45" href="#L45" class="br">45 </a>
+<a id="L46" href="#L46" class="br">46 </a>        <span class="kwrd">if</span> (<span class="hid">board.finished</span> || <span class="hid">depth</span> == <span class="num">0</span>) {
+<a id="L47" href="#L47" class="br">47 </a>            <span class="kwrd">return</span> <span class="kwrd">cast</span>(<span class="type">double</span>) <span class="hid">board.score</span>(<span class="kwrd">this</span>.<span class="hid">isBlack</span>);
+<a id="L48" href="#L48" class="br">48 </a>        }
+<a id="L49" href="#L49" class="br">49 </a>
+<a id="L50" href="#L50" class="br">50 </a>        <span class="com">/// pass</span>
+<a id="L51" href="#L51" class="br">51 </a>        <span class="kwrd">if</span> ((<span class="hid">isMine</span> &amp;&amp; <span class="hid">board.pass</span>(<span class="kwrd">this</span>.<span class="hid">isBlack</span>)) || (!<span class="hid">isMine</span> &amp;&amp; <span class="hid">board.pass</span>(!<span class="kwrd">this</span>.<span class="hid">isBlack</span>))) {
+<a id="L52" href="#L52" class="br">52 </a>            <span class="kwrd">return</span> <span class="hid">search</span>(<span class="hid">board</span>, !<span class="hid">isMine</span>, <span class="hid">depth</span>-<span class="num">1</span>);
+<a id="L53" href="#L53" class="br">53 </a>        }
+<a id="L54" href="#L54" class="br">54 </a>
+<a id="L55" href="#L55" class="br">55 </a>        <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">alpha</span> = -<span class="type">double</span>.<span class="hid">infinity</span>;
+<a id="L56" href="#L56" class="br">56 </a>        <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">beta</span> = <span class="type">double</span>.<span class="hid">infinity</span>;
+<a id="L57" href="#L57" class="br">57 </a>        <span class="kwrd">foreach</span> (<span class="hid">r</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">0</span>) {
+<a id="L58" href="#L58" class="br">58 </a>            <span class="kwrd">foreach</span> (<span class="hid">c</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">1</span>) {
+<a id="L59" href="#L59" class="br">59 </a>                <span class="kwrd">immutable</span> <span class="hid">color</span> = <span class="hid">isMine</span> ? <span class="kwrd">this</span>.<span class="hid">isBlack</span> : !<span class="kwrd">this</span>.<span class="hid">isBlack</span>; <span class="com">// XOR</span>
+<a id="L60" href="#L60" class="br">60 </a>                <span class="kwrd">immutable</span> <span class="hid">b</span> = <span class="hid">board.put</span>(<span class="hid">color</span>, <span class="hid">r</span>, <span class="hid">c</span>);
+<a id="L61" href="#L61" class="br">61 </a>                <span class="kwrd">if</span> (<span class="hid">b.valid</span>) {
+<a id="L62" href="#L62" class="br">62 </a>                    <span class="kwrd">const</span> <span class="hid">score</span> = <span class="hid">search</span>(<span class="hid">b</span>, !<span class="hid">isMine</span>, <span class="hid">depth</span> - <span class="num">1</span>); <span class="com">// recur</span>
+<a id="L63" href="#L63" class="br">63 </a>                    <span class="kwrd">if</span> (<span class="hid">isMine</span>) {
+<a id="L64" href="#L64" class="br">64 </a>                        <span class="hid">alpha</span> = <span class="hid">max</span>(<span class="hid">alpha</span>, <span class="hid">score</span>);
+<a id="L65" href="#L65" class="br">65 </a>                    } <span class="kwrd">else</span> {
+<a id="L66" href="#L66" class="br">66 </a>                        <span class="hid">beta</span> = <span class="hid">min</span>(<span class="hid">beta</span>, <span class="hid">score</span>);
+<a id="L67" href="#L67" class="br">67 </a>                    }
+<a id="L68" href="#L68" class="br">68 </a>                }
+<a id="L69" href="#L69" class="br">69 </a>            }
+<a id="L70" href="#L70" class="br">70 </a>        }
+<a id="L71" href="#L71" class="br">71 </a>        <span class="kwrd">return</span> <span class="hid">isMine</span> ? <span class="hid">alpha</span> : <span class="hid">beta</span>;
+<a id="L72" href="#L72" class="br">72 </a>    }
+<a id="L73" href="#L73" class="br">73 </a>}
+<a id="L74" href="#L74" class="br">74 </a>
+<a id="L75" href="#L75" class="br">75 </a>
+<a id="L76" href="#L76" class="br">76 </a><span class="kwrd">unittest</span> {
+<a id="L77" href="#L77" class="br">77 </a>    <span class="kwrd">auto</span> <span class="hid">env</span> = <span class="hid">reset</span>(<span class="num">4</span>, <span class="num">4</span>); <span class="com">// 4x4 is known to result that second player won +8 points</span>
+<a id="L78" href="#L78" class="br">78 </a>    <span class="kwrd">auto</span> <span class="hid">agent</span> = <a href="dreversi.agent.d.html#L20" title="dreversi.agent.MinMaxAgent" class="hid">MinMaxAgent</a>(<span class="kwrd">true</span>); <span class="com">// as a first player</span>
+<a id="L79" href="#L79" class="br">79 </a>    <span class="kwrd">auto</span> <span class="hid">action</span> = <span class="hid">agent.select</span>(<span class="hid">env</span>, <span class="num">11</span>);
+<a id="L80" href="#L80" class="br">80 </a>    <span class="kwrd">assert</span>(<span class="hid">action.score</span> == -<span class="num">8.0</span>);
+<a id="L81" href="#L81" class="br">81 </a>}
+<a id="L82" href="#L82" class="br">82 </a>
+<a id="L83" href="#L83" class="br">83 </a><span class="kwrd">alias</span> <a href="dreversi.agent.d.html#L83" title="dreversi.agent.AlphaBetaAgent" class="hid">AlphaBetaAgent</a> = <a href="dreversi.agent.d.html#L87" title="dreversi.agent.AlphaBetaAgentImpl" class="hid">AlphaBetaAgentImpl</a>!<span class="kwrd">false</span>;
+<a id="L84" href="#L84" class="br">84 </a>
+<a id="L85" href="#L85" class="br">85 </a><span class="com">/// this is not efficient implementation</span>
+<a id="L86" href="#L86" class="br">86 </a><span class="com">/// as it computes without memory of game tree</span>
+<a id="L87" href="#L87" class="br">87 </a><span class="kwrd">struct</span> <a href="dreversi.agent.d.html#L87" title="dreversi.agent.AlphaBetaAgentImpl" class="hid">AlphaBetaAgentImpl</a>(<span class="type">bool</span> <span class="hid">isGUI</span> = <span class="kwrd">false</span>) {
+<a id="L88" href="#L88" class="br">88 </a>    <span class="kwrd">import</span> <span class="hid">std.container</span> : <span class="hid">DList</span>;
+<a id="L89" href="#L89" class="br">89 </a>
+<a id="L90" href="#L90" class="br">90 </a>    <span class="type">bool</span> <span class="hid">isBlack</span>;
+<a id="L91" href="#L91" class="br">91 </a>    <span class="type">bool</span> <span class="hid">verbose</span> = <span class="kwrd">false</span>;
+<a id="L92" href="#L92" class="br">92 </a>    <span class="type">double</span>[<span class="hid">Board</span>] <span class="hid">scoreCache</span>;
+<a id="L93" href="#L93" class="br">93 </a>    <span class="hid">DList</span>!<span class="hid">Board</span> <span class="hid">boardCache</span>;
+<a id="L94" href="#L94" class="br">94 </a>    <span class="com">// TODO auto adjust these params</span>
+<a id="L95" href="#L95" class="br">95 </a>    <span class="hid">size_t</span> <span class="hid">maxMemory</span> = <span class="num">999999</span>;
+<a id="L96" href="#L96" class="br">96 </a>    <span class="hid">size_t</span> <span class="hid">removeSize</span> = <span class="num">99</span>;
+<a id="L97" href="#L97" class="br">97 </a>
+<a id="L98" href="#L98" class="br">98 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isGUI</span>)
+<a id="L99" href="#L99" class="br">99 </a>    {
+<a id="L100" href="#L100" class="br">100 </a>        <span class="kwrd">shared</span> <span class="type">bool</span> <span class="hid">canceled</span>;
+<a id="L101" href="#L101" class="br">101 </a>        <span class="kwrd">shared</span> <span class="type">double</span> <span class="hid">progress</span>;
+<a id="L102" href="#L102" class="br">102 </a>    }
+<a id="L103" href="#L103" class="br">103 </a>
+<a id="L104" href="#L104" class="br">104 </a>    <span class="type">void</span> <span class="hid">memoizeScore</span>(<span class="kwrd">ref</span> <span class="kwrd">in</span> <span class="hid">Board</span> <span class="hid">board</span>, <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">s</span>) {
+<a id="L105" href="#L105" class="br">105 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span>;
+<a id="L106" href="#L106" class="br">106 </a>        <span class="kwrd">this</span>.<span class="hid">scoreCache</span>[<span class="hid">board</span>] = <span class="hid">s</span>;
+<a id="L107" href="#L107" class="br">107 </a>        <span class="kwrd">this</span>.<span class="hid">boardCache.insert</span>(<span class="hid">board</span>);
+<a id="L108" href="#L108" class="br">108 </a>        <span class="hid">size_t</span> <span class="hid">i</span>;
+<a id="L109" href="#L109" class="br">109 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">scoreCache.length</span> &gt; <span class="hid">maxMemory</span>) {
+<a id="L110" href="#L110" class="br">110 </a>            <span class="kwrd">foreach</span> (<span class="kwrd">ref</span> <span class="hid">b</span>; <span class="kwrd">this</span>.<span class="hid">boardCache</span>) {
+<a id="L111" href="#L111" class="br">111 </a>                <span class="kwrd">this</span>.<span class="hid">scoreCache.remove</span>(<span class="hid">b</span>);
+<a id="L112" href="#L112" class="br">112 </a>                <span class="kwrd">if</span> (<span class="hid">i</span> &gt; <span class="kwrd">this</span>.<span class="hid">removeSize</span>) <span class="kwrd">break</span>;
+<a id="L113" href="#L113" class="br">113 </a>                ++<span class="hid">i</span>;
+<a id="L114" href="#L114" class="br">114 </a>            }
+<a id="L115" href="#L115" class="br">115 </a>            <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="kwrd">this</span>.<span class="hid">boardCache</span>[];
+<a id="L116" href="#L116" class="br">116 </a>            <span class="hid">popFrontN</span>(<span class="hid">r</span>, <span class="kwrd">this</span>.<span class="hid">removeSize</span>);
+<a id="L117" href="#L117" class="br">117 </a>        }
+<a id="L118" href="#L118" class="br">118 </a>    }
+<a id="L119" href="#L119" class="br">119 </a>
+<a id="L120" href="#L120" class="br">120 </a>    <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a> <span class="hid">select</span>(<span class="kwrd">ref</span> <span class="kwrd">in</span> <span class="hid">Board</span> <span class="hid">board</span>, <span class="hid">size_t</span> <span class="hid">depth</span> = <span class="num">3</span>) {
+<a id="L121" href="#L121" class="br">121 </a>        <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a> <span class="hid">best</span>;
+<a id="L122" href="#L122" class="br">122 </a>        <span class="kwrd">this</span>.<span class="hid">scoreCache.rehash</span>;
+<a id="L123" href="#L123" class="br">123 </a>        <span class="com">// TODO progress report</span>
+<a id="L124" href="#L124" class="br">124 </a>        <span class="com">// TODO parallel fork/join</span>
+<a id="L125" href="#L125" class="br">125 </a>        <span class="kwrd">foreach</span> (<span class="hid">r</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">0</span>) {
+<a id="L126" href="#L126" class="br">126 </a>            <span class="kwrd">foreach</span> (<span class="hid">c</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">1</span>) {
+<a id="L127" href="#L127" class="br">127 </a>                <span class="kwrd">immutable</span> <span class="hid">next</span> = <span class="hid">board.put</span>(<span class="kwrd">this</span>.<span class="hid">isBlack</span>, <span class="hid">r</span>, <span class="hid">c</span>);
+<a id="L128" href="#L128" class="br">128 </a>                <span class="kwrd">if</span> (<span class="hid">next.valid</span>) {
+<a id="L129" href="#L129" class="br">129 </a>                    <span class="kwrd">immutable</span> <span class="hid">score</span> = <span class="hid">search</span>(<span class="hid">next</span>, <span class="hid">depth</span>);
+<a id="L130" href="#L130" class="br">130 </a>                    <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">verbose</span>) {
+<a id="L131" href="#L131" class="br">131 </a>                        <span class="hid">writefln</span>!<span class="str">&quot;Action(%d, %d, %f)&quot;</span>(<span class="hid">r</span>, <span class="hid">c</span>, <span class="hid">score</span>);
+<a id="L132" href="#L132" class="br">132 </a>                    }
+<a id="L133" href="#L133" class="br">133 </a>                    <span class="kwrd">if</span> (<span class="hid">best.score.isNaN</span> || <span class="hid">score</span> &gt; <span class="hid">best.score</span>) {
+<a id="L134" href="#L134" class="br">134 </a>                        <span class="hid">best</span> = <a href="dreversi.agent.d.html#L12" title="dreversi.agent.Action" class="hid">Action</a>(<span class="hid">r</span>, <span class="hid">c</span>, <span class="hid">score</span>);
+<a id="L135" href="#L135" class="br">135 </a>                    }
+<a id="L136" href="#L136" class="br">136 </a>                }
+<a id="L137" href="#L137" class="br">137 </a>            }
+<a id="L138" href="#L138" class="br">138 </a>        }
+<a id="L139" href="#L139" class="br">139 </a>        <span class="kwrd">return</span> <span class="hid">best</span>;
+<a id="L140" href="#L140" class="br">140 </a>    }
+<a id="L141" href="#L141" class="br">141 </a>
+<a id="L142" href="#L142" class="br">142 </a>    <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">search</span>(<span class="type">bool</span> <span class="hid">isMine</span> = <span class="kwrd">false</span>)(<span class="kwrd">in</span> <span class="hid">Board</span> <span class="hid">board</span>, <span class="hid">size_t</span> <span class="hid">depth</span>,
+<a id="L143" href="#L143" class="br">143 </a>                                      <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">alpha</span> = -<span class="type">double</span>.<span class="hid">infinity</span>,
+<a id="L144" href="#L144" class="br">144 </a>                                      <a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a> <span class="hid">beta</span> = <span class="type">double</span>.<span class="hid">infinity</span>) {
+<a id="L145" href="#L145" class="br">145 </a>        <span class="com">// import std.algorithm : max, min;</span>
+<a id="L146" href="#L146" class="br">146 </a>        <span class="kwrd">import</span> <span class="hid">mir.math.common</span> : <span class="hid">fmax</span>, <span class="hid">fmin</span>;
+<a id="L147" href="#L147" class="br">147 </a>
+<a id="L148" href="#L148" class="br">148 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMine</span>) {
+<a id="L149" href="#L149" class="br">149 </a>            <span class="kwrd">immutable</span> <span class="hid">scale</span> = <span class="num">1</span>;
+<a id="L150" href="#L150" class="br">150 </a>        } <span class="kwrd">else</span> {
+<a id="L151" href="#L151" class="br">151 </a>            <span class="kwrd">immutable</span> <span class="hid">scale</span> = -<span class="num">1</span>;
+<a id="L152" href="#L152" class="br">152 </a>        }
+<a id="L153" href="#L153" class="br">153 </a>
+<a id="L154" href="#L154" class="br">154 </a>        <span class="kwrd">if</span> (<span class="hid">board</span> <span class="kwrd">in</span> <span class="kwrd">this</span>.<span class="hid">scoreCache</span>) {
+<a id="L155" href="#L155" class="br">155 </a>            <span class="kwrd">return</span> <span class="hid">scale</span> * <span class="kwrd">this</span>.<span class="hid">scoreCache</span>[<span class="hid">board</span>];
+<a id="L156" href="#L156" class="br">156 </a>        }
+<a id="L157" href="#L157" class="br">157 </a>
+<a id="L158" href="#L158" class="br">158 </a>        <span class="kwrd">if</span> (<span class="hid">board.finished</span> || <span class="hid">depth</span> == <span class="num">0</span>) {
+<a id="L159" href="#L159" class="br">159 </a>            <span class="kwrd">immutable</span> <span class="hid">s</span> = <span class="kwrd">cast</span>(<a href="dreversi.agent.d.html#L10" title="dreversi.agent.Score" class="hid">Score</a>) <span class="hid">board.score</span>(<span class="kwrd">this</span>.<span class="hid">isBlack</span>);
+<a id="L160" href="#L160" class="br">160 </a>            <span class="kwrd">this</span>.<span class="hid">memoizeScore</span>(<span class="hid">board</span>, <span class="hid">s</span>);
+<a id="L161" href="#L161" class="br">161 </a>            <span class="kwrd">return</span> <span class="hid">s</span>;
+<a id="L162" href="#L162" class="br">162 </a>        }
+<a id="L163" href="#L163" class="br">163 </a>
+<a id="L164" href="#L164" class="br">164 </a>        <span class="com">/// pass</span>
+<a id="L165" href="#L165" class="br">165 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMine</span>) {
+<a id="L166" href="#L166" class="br">166 </a>            <span class="kwrd">immutable</span> <span class="hid">color</span> = <span class="kwrd">this</span>.<span class="hid">isBlack</span>;
+<a id="L167" href="#L167" class="br">167 </a>        } <span class="kwrd">else</span> {
+<a id="L168" href="#L168" class="br">168 </a>            <span class="kwrd">immutable</span> <span class="hid">color</span> = !<span class="kwrd">this</span>.<span class="hid">isBlack</span>;
+<a id="L169" href="#L169" class="br">169 </a>        }
+<a id="L170" href="#L170" class="br">170 </a>        <span class="kwrd">if</span> (<span class="hid">board.pass</span>(<span class="hid">color</span>)) {
+<a id="L171" href="#L171" class="br">171 </a>            <span class="kwrd">immutable</span> <span class="hid">s</span> = <span class="hid">search</span>!(!<span class="hid">isMine</span>)(<span class="hid">board</span>, <span class="hid">depth</span>-<span class="num">1</span>, <span class="hid">alpha</span>, <span class="hid">beta</span>);
+<a id="L172" href="#L172" class="br">172 </a>            <span class="kwrd">this</span>.<span class="hid">memoizeScore</span>(<span class="hid">board</span>, <span class="hid">s</span>);
+<a id="L173" href="#L173" class="br">173 </a>            <span class="kwrd">return</span> <span class="hid">s</span>;
+<a id="L174" href="#L174" class="br">174 </a>        }
+<a id="L175" href="#L175" class="br">175 </a>
+<a id="L176" href="#L176" class="br">176 </a>    <span class="hid">outer</span>: <span class="kwrd">foreach</span> (<span class="hid">r</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">0</span>) {
+<a id="L177" href="#L177" class="br">177 </a>            <span class="kwrd">foreach</span> (<span class="hid">c</span>; <span class="num">0</span> .. <span class="hid">board.length</span>!<span class="num">1</span>) {
+<a id="L178" href="#L178" class="br">178 </a>                <span class="kwrd">immutable</span> <span class="hid">b</span> = <span class="hid">board.put</span>(<span class="hid">color</span>, <span class="hid">r</span>, <span class="hid">c</span>);
+<a id="L179" href="#L179" class="br">179 </a>                <span class="kwrd">if</span> (<span class="hid">b.valid</span>) {
+<a id="L180" href="#L180" class="br">180 </a>                    <span class="kwrd">immutable</span> <span class="hid">score</span> = <span class="hid">search</span>!(!<span class="hid">isMine</span>)(<span class="hid">b</span>, <span class="hid">depth</span> - <span class="num">1</span>, <span class="hid">alpha</span>, <span class="hid">beta</span>); <span class="com">// recur</span>
+<a id="L181" href="#L181" class="br">181 </a>                    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMine</span>) {
+<a id="L182" href="#L182" class="br">182 </a>                        <span class="hid">alpha</span> = <span class="hid">fmax</span>(<span class="hid">alpha</span>, <span class="hid">score</span>);
+<a id="L183" href="#L183" class="br">183 </a>                    } <span class="kwrd">else</span> {
+<a id="L184" href="#L184" class="br">184 </a>                        <span class="hid">beta</span> = <span class="hid">fmin</span>(<span class="hid">beta</span>, <span class="hid">score</span>);
+<a id="L185" href="#L185" class="br">185 </a>                    }
+<a id="L186" href="#L186" class="br">186 </a>                    <span class="kwrd">if</span> (<span class="hid">alpha</span> &gt;= <span class="hid">beta</span>) { <span class="com">// cut</span>
+<a id="L187" href="#L187" class="br">187 </a>                        <span class="kwrd">break</span> <span class="hid">outer</span>;
+<a id="L188" href="#L188" class="br">188 </a>                    }
+<a id="L189" href="#L189" class="br">189 </a>                }
+<a id="L190" href="#L190" class="br">190 </a>            }
+<a id="L191" href="#L191" class="br">191 </a>        }
+<a id="L192" href="#L192" class="br">192 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMine</span>) {
+<a id="L193" href="#L193" class="br">193 </a>            <span class="kwrd">this</span>.<span class="hid">memoizeScore</span>(<span class="hid">board</span>, <span class="hid">alpha</span>);
+<a id="L194" href="#L194" class="br">194 </a>            <span class="kwrd">return</span> <span class="hid">alpha</span>;
+<a id="L195" href="#L195" class="br">195 </a>        } <span class="kwrd">else</span> {
+<a id="L196" href="#L196" class="br">196 </a>            <span class="kwrd">this</span>.<span class="hid">memoizeScore</span>(<span class="hid">board</span>, -<span class="hid">beta</span>);
+<a id="L197" href="#L197" class="br">197 </a>            <span class="kwrd">return</span> <span class="hid">beta</span>;
+<a id="L198" href="#L198" class="br">198 </a>        }
+<a id="L199" href="#L199" class="br">199 </a>    }
+<a id="L200" href="#L200" class="br">200 </a>}
+<a id="L201" href="#L201" class="br">201 </a>
+<a id="L202" href="#L202" class="br">202 </a><span class="kwrd">unittest</span> {
+<a id="L203" href="#L203" class="br">203 </a>    <span class="kwrd">auto</span> <span class="hid">env0</span> = <span class="hid">reset</span>(<span class="num">4</span>, <span class="num">4</span>); <span class="com">// 4x4 is known to result that second player won +8 points</span>
+<a id="L204" href="#L204" class="br">204 </a>    <span class="kwrd">auto</span> <span class="hid">agentB</span> = <a href="dreversi.agent.d.html#L83" title="dreversi.agent.AlphaBetaAgent" class="hid">AlphaBetaAgent</a>(<span class="kwrd">true</span>); <span class="com">// as a first player</span>
+<a id="L205" href="#L205" class="br">205 </a>    <span class="kwrd">auto</span> <span class="hid">agentW</span> = <a href="dreversi.agent.d.html#L83" title="dreversi.agent.AlphaBetaAgent" class="hid">AlphaBetaAgent</a>(<span class="kwrd">false</span>); <span class="com">// as a first player</span>
+<a id="L206" href="#L206" class="br">206 </a>
+<a id="L207" href="#L207" class="br">207 </a>    <span class="kwrd">auto</span> <span class="hid">action0</span> = <span class="hid">agentB.select</span>(<span class="hid">env0</span>, <span class="num">11</span>);
+<a id="L208" href="#L208" class="br">208 </a>    <span class="kwrd">assert</span>(<span class="hid">action0.score</span> == -<span class="num">8.0</span>);
+<a id="L209" href="#L209" class="br">209 </a>    <span class="kwrd">auto</span> <span class="hid">env1</span> = <span class="hid">env0.put</span>(<span class="hid">agentB.isBlack</span>, <span class="hid">action0.row</span>, <span class="hid">action0.col</span>);
+<a id="L210" href="#L210" class="br">210 </a>
+<a id="L211" href="#L211" class="br">211 </a>    <span class="kwrd">auto</span> <span class="hid">action1</span> = <span class="hid">agentW.select</span>(<span class="hid">env1</span>, <span class="num">11</span>);
+<a id="L212" href="#L212" class="br">212 </a>    <span class="kwrd">assert</span>(<span class="hid">action1.score</span> == <span class="num">8.0</span>);
+<a id="L213" href="#L213" class="br">213 </a>    <span class="kwrd">auto</span> <span class="hid">env2</span> = <span class="hid">env1.put</span>(<span class="hid">agentW.isBlack</span>, <span class="hid">action1.row</span>, <span class="hid">action1.col</span>);
+<a id="L214" href="#L214" class="br">214 </a>
+<a id="L215" href="#L215" class="br">215 </a>    <span class="kwrd">auto</span> <span class="hid">action2</span> = <span class="hid">agentB.select</span>(<span class="hid">env2</span>, <span class="num">11</span>);
+<a id="L216" href="#L216" class="br">216 </a>    <span class="kwrd">assert</span>(<span class="hid">action2.score</span> == -<span class="num">8.0</span>);
+<a id="L217" href="#L217" class="br">217 </a>    <span class="kwrd">auto</span> <span class="hid">env3</span> = <span class="hid">env2.put</span>(<span class="hid">agentB.isBlack</span>, <span class="hid">action2.row</span>, <span class="hid">action2.col</span>);
+<a id="L218" href="#L218" class="br">218 </a>}</pre></div>
+		<div id="page-nav">
+		<div id="source-navigation"><div class="list-holder"><ul><li><a href="../dreversi.agent.html" class="docs">[Docs] </a><a href="#L1">dreversi.agent</a><ul><li><a href="#L10">Score</a></li><li><a href="#L12">Action</a><ul><li><a href="#L13">row</a></li><li><a href="#L14">col</a></li><li><a href="#L15">score</a></li></ul></li><li><a href="../dreversi.agent.MinMaxAgent.html" class="docs">[Docs] </a><a href="#L20">MinMaxAgent</a><ul><li><a href="#L21">isBlack</a></li><li><a href="#L22">verbose</a></li><li><a href="#L24">select</a></li><li><a href="#L41">search</a></li></ul></li><li><a href="#L83">AlphaBetaAgent</a></li><li><a href="../dreversi.agent.AlphaBetaAgentImpl.html" class="docs">[Docs] </a><a href="#L87">AlphaBetaAgentImpl</a><ul><li><a href="#L90">isBlack</a></li><li><a href="#L91">verbose</a></li><li><a href="#L92">scoreCache</a></li><li><a href="#L93">boardCache</a></li><li><a href="#L95">maxMemory</a></li><li><a href="#L96">removeSize</a></li><li><a href="#L100">canceled</a></li><li><a href="#L101">progress</a></li><li><a href="#L104">memoizeScore</a></li><li><a href="#L120">select</a></li><li><a href="#L142">search</a></li></ul></li></ul></li></ul></div></div></div>
+	</div>
+	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
+</body>
+</html>
